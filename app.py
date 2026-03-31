@@ -6,8 +6,28 @@ import io
 
 st.set_page_config(page_title="أداة معالجة تقارير الأشعة", layout="centered")
 
+# كود تنسيق لضبط اتجاه النص لليمين (عربي) وتوسيط كل المحتوى
+st.markdown("""
+    <style>
+    .block-container {
+        direction: rtl;
+        text-align: center;
+    }
+    h1, h2, h3, h4, h5, h6, p, div {
+        text-align: center !important;
+    }
+    .stButton>button {
+        margin: 0 auto;
+        display: block;
+    }
+    .stAlert {
+        text-align: center;
+        direction: rtl;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📊 أداة معالجة تقارير الأشعة - الطوارئ")
-st.write("ارفع ملف البيانات الخام")
 
 uploaded_file = st.file_uploader("اختر الملف:", type=["csv", "xlsx"])
 
@@ -28,8 +48,8 @@ if uploaded_file is not None:
         # حساب الوقت بالدقائق
         df['calc_tat_min'] = (df['Report Creation Date'] - df['Order Creation Date']).dt.total_seconds() / 60.0
         
-        # تنظيف أولي (استبعاد الأوقات السالبة واللي تجاوزت 4 ساعات)
-        df_clean = df[(df['calc_tat_min'] >= 0) & (df['calc_tat_min'] <= 240)].copy()
+        # تنظيف أولي (استبعاد الأقل من 15 دقيقة لأنها غير منطقية واللي تجاوزت 4 ساعات)
+        df_clean = df[(df['calc_tat_min'] >= 15) & (df['calc_tat_min'] <= 240)].copy()
         
         # تحديد الشهر الغالب وحذف الشهور الثانية
         dominant_month = df_clean['Order Creation Date'].dt.month.mode()[0]
@@ -76,7 +96,7 @@ if uploaded_file is not None:
         # حذف الأعمدة المضافة برمجياً عشان يرجع الملف زي ما كان
         df_final = df_final.drop(columns=['calc_tat_min', 'Date'])
         
-        st.success("✅ تمت المعالجة بنجاح! تم تطبيق المستهدفات الديناميكية.")
+        st.success("✅ تمت المعالجة بنجاح! تم تطبيق المستهدفات الديناميكية واستبعاد الطلبات الأقل من 15 دقيقة.")
         
         # عرض النتائج
         st.write("### 📈 ملخص المتوسطات بعد المعالجة:")
@@ -96,7 +116,7 @@ if uploaded_file is not None:
         main_csv = convert_df(df_final)
         daily_csv = convert_df(daily_report)
         
-        with col1:
+        with col2:
             st.download_button(
                 label="📥 تحميل التقرير الرئيسي",
                 data=main_csv,
@@ -104,7 +124,7 @@ if uploaded_file is not None:
                 mime='text/csv',
             )
             
-        with col2:
+        with col1:
             st.download_button(
                 label="📥 تحميل المتوسط اليومي",
                 data=daily_csv,
