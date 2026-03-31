@@ -7,7 +7,7 @@ import io
 st.set_page_config(page_title="أداة معالجة تقارير الأشعة", layout="centered")
 
 st.title("📊 أداة معالجة تقارير الأشعة - الطوارئ")
-st.write("ارفع ملف البيانات الخام (Raw Data) بصيغة CSV أو Excel، والنظام بيقوم بالفلترة وضبط المتوسطات تلقائياً.")
+st.write("ارفع ملف البيانات الخام")
 
 uploaded_file = st.file_uploader("اختر الملف:", type=["csv", "xlsx"])
 
