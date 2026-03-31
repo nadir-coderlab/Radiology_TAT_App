@@ -85,22 +85,39 @@ if uploaded_file is not None:
             
         # تجميع البيانات النهائية
         df_final = pd.concat(final_dfs)
-        overall_mean = df_final['calc_tat_min'].mean()
+        overall_mean_min = df_final['calc_tat_min'].mean()
+        overall_mean_hours = overall_mean_min / 60.0
         
         # تجهيز تقرير المتوسط اليومي
         df_final['Date'] = df_final['Order Creation Date'].dt.date
         daily_avg = df_final.groupby('Date')['calc_tat_min'].mean().reset_index()
         daily_avg['TAT in Hours'] = (daily_avg['calc_tat_min'] / 60.0).round(2)
-        daily_report = daily_avg[['Date', 'TAT in Hours']]
+        daily_report = daily_avg[['Date', 'TAT in Hours']].copy()
         
-        # حذف الأعمدة المضافة برمجياً عشان يرجع الملف زي ما كان
+        # إضافة صف المتوسط العام في نهاية التقرير اليومي
+        summary_row_daily = pd.DataFrame([{'Date': 'المتوسط العام', 'TAT in Hours': round(overall_mean_hours, 2)}])
+        daily_report = pd.concat([daily_report, summary_row_daily], ignore_index=True)
+        
+        # تجهيز التقرير الرئيسي وإضافة أعمدة الدقائق والساعات
+        df_final['TAT (Minutes)'] = df_final['calc_tat_min'].round(2)
+        df_final['TAT (Hours)'] = (df_final['calc_tat_min'] / 60.0).round(2)
+        
+        # حذف الأعمدة المضافة برمجياً
         df_final = df_final.drop(columns=['calc_tat_min', 'Date'])
         
-        st.success("✅ تمت المعالجة بنجاح! تم تطبيق المستهدفات الديناميكية واستبعاد الطلبات الأقل من 15 دقيقة.")
+        # إضافة صف المتوسط العام في نهاية التقرير الرئيسي
+        summary_row_main = {col: '' for col in df_final.columns}
+        summary_row_main[df_final.columns[0]] = 'المتوسط العام' # نكتب الكلمة في أول عمود
+        summary_row_main['TAT (Minutes)'] = round(overall_mean_min, 2)
+        summary_row_main['TAT (Hours)'] = round(overall_mean_hours, 2)
+        
+        df_final = pd.concat([df_final, pd.DataFrame([summary_row_main])], ignore_index=True)
+        
+        st.success("✅ تمت المعالجة بنجاح! تم تطبيق المستهدفات الديناميكية وإضافة صفوف المتوسطات لجميع الملفات.")
         
         # عرض النتائج
         st.write("### 📈 ملخص المتوسطات بعد المعالجة:")
-        st.write(f"- **المتوسط العام لجميع المستشفيات:** {overall_mean:.2f} دقيقة")
+        st.write(f"- **المتوسط العام لجميع المستشفيات:** {overall_mean_min:.2f} دقيقة ({overall_mean_hours:.2f} ساعة)")
         for hosp in hospitals:
             hosp_final_mean = pd.concat(final_dfs).loc[pd.concat(final_dfs)['Hospital'] == hosp, 'calc_tat_min'].mean()
             st.write(f"- **مستشفى ({hosp}):** {hosp_final_mean:.2f} دقيقة")
@@ -108,10 +125,10 @@ if uploaded_file is not None:
         # أزرار التحميل
         col1, col2 = st.columns(2)
         
-        # تحويل الملفات للتحميل
+        # تحويل الملفات للتحميل مع دعم اللغة العربية (utf-8-sig)
         @st.cache_data
         def convert_df(df_to_convert):
-            return df_to_convert.to_csv(index=False).encode('utf-8')
+            return df_to_convert.to_csv(index=False).encode('utf-8-sig')
             
         main_csv = convert_df(df_final)
         daily_csv = convert_df(daily_report)
